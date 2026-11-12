@@ -60,6 +60,37 @@
         </div>
       </div>
 
+      <!-- Profile Picture & Avatar Card -->
+      <div class="card" style="margin-bottom: 2rem;">
+        <div class="card-header">
+          <h3 style="font-size: 1.15rem;">Profile Photograph</h3>
+        </div>
+        <div class="card-body" style="display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;">
+          <div style="position: relative;">
+            <div id="profile-avatar-display" style="width: 100px; height: 100px; border-radius: 50%; background: var(--primary-color); color: #FFFFFF; font-size: 2.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 3px solid var(--secondary-color); box-shadow: var(--shadow-md);">
+              AS
+            </div>
+            <img id="profile-avatar-img" src="" alt="Profile Photo" style="display: none; width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--secondary-color); box-shadow: var(--shadow-md);">
+          </div>
+          <div style="flex: 1; min-width: 240px;">
+            <h4 style="font-size: 1rem; margin-bottom: 0.35rem;">Upload Student Photograph</h4>
+            <p style="font-size: 0.8125rem; color: var(--color-text-muted); margin-bottom: 0.85rem;">
+              Upload a clear face photograph (PNG, JPG, WEBP, max 5MB). Your photo will appear in the navigation bar, student dashboard, and verification records.
+            </p>
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+              <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('avatar-file-input').click()">
+                📷 Choose Photo
+              </button>
+              <button type="button" id="btn-upload-avatar" class="btn btn-primary btn-sm" style="display: none;">
+                Save Photo
+              </button>
+              <span id="avatar-file-name" style="font-size: 0.75rem; color: var(--color-text-muted);"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Profile Information Form -->
       <div class="card" style="margin-bottom: 2rem;">
         <div class="card-header">
@@ -96,26 +127,63 @@
         </div>
       </div>
 
-      <!-- Password Update Section -->
+      <!-- Password Update Section with Step-by-Step Security Verification -->
       <div class="card">
-        <div class="card-header">
-          <h3 style="font-size: 1.15rem;">Security Credentials</h3>
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 1.15rem;">Security Credentials &amp; Password</h3>
+          <span id="password-security-badge" class="badge" style="background: #FAF4ED; color: var(--primary-color); border: 1px solid var(--secondary-color);">🔒 Verification Required</span>
         </div>
         <div class="card-body">
           <form id="profile-password-form">
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="profile-new-pass">New Password</label>
-                <input type="password" id="profile-new-pass" class="form-control" placeholder="Min. 6 characters" required>
+            <!-- Step 1: Confirm Old / Current Password -->
+            <div style="background: #FAF8F5; border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <label class="form-label" for="profile-current-pass" style="margin: 0; font-weight: 700;">
+                  Step 1: Enter Current Password <span class="required">*</span>
+                </label>
+                <span id="current-pass-status" style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);">Unverified</span>
               </div>
-
-              <div class="form-group">
-                <label class="form-label" for="profile-confirm-pass">Confirm New Password</label>
-                <input type="password" id="profile-confirm-pass" class="form-control" placeholder="Repeat new password" required>
+              <p style="font-size: 0.8125rem; color: var(--color-text-muted); margin-bottom: 0.75rem;">
+                To protect your account against unauthorized alterations, confirm your existing password first.
+              </p>
+              <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <div class="input-password-wrapper" style="flex: 1;">
+                  <input type="password" id="profile-current-pass" class="form-control" placeholder="Enter your current password" required autocomplete="current-password">
+                  <button type="button" class="btn-toggle-password" aria-label="Toggle password visibility">👁</button>
+                </div>
+                <button type="button" id="btn-verify-current-pass" class="btn btn-secondary btn-sm" style="white-space: nowrap;">
+                  🔍 Confirm Old Password
+                </button>
               </div>
             </div>
 
-            <button type="submit" class="btn btn-outline btn-sm">Update Password</button>
+            <!-- Step 2: New Password (Revealed and enabled upon successful verification) -->
+            <div id="new-password-fields-wrapper" style="opacity: 0.5; pointer-events: none; transition: opacity 0.3s ease;">
+              <div style="margin-bottom: 0.75rem; font-weight: 700; font-size: 0.875rem; color: var(--primary-color);">
+                Step 2: Choose Your New Password
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="profile-new-pass">New Password <span class="required">*</span></label>
+                  <div class="input-password-wrapper">
+                    <input type="password" id="profile-new-pass" class="form-control" placeholder="Min. 6 characters" disabled autocomplete="new-password">
+                    <button type="button" class="btn-toggle-password" aria-label="Toggle password visibility">👁</button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="profile-confirm-pass">Confirm New Password <span class="required">*</span></label>
+                  <div class="input-password-wrapper">
+                    <input type="password" id="profile-confirm-pass" class="form-control" placeholder="Repeat new password" disabled autocomplete="new-password">
+                    <button type="button" class="btn-toggle-password" aria-label="Toggle password visibility">👁</button>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" id="btn-save-new-password" class="btn btn-primary btn-sm" disabled>
+                🔐 Update Password
+              </button>
+            </div>
           </form>
         </div>
       </div>
