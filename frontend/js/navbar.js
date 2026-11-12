@@ -61,6 +61,10 @@ function updateNavbarAuth() {
       ? session.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
       : 'U';
 
+    const avatarHtml = session.user.avatar_url
+      ? `<img src="${session.user.avatar_url.startsWith('http') ? session.user.avatar_url : `${CONFIG.SERVER_URL}${session.user.avatar_url}`}" alt="${session.user.name}" class="user-avatar-small" style="object-fit: cover; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--secondary-color);">`
+      : `<div class="user-avatar-small" title="${session.user.name}">${initials}</div>`;
+
     authContainer.innerHTML = `
       <a href="${pagesPrefix}report-lost.html" class="btn btn-outline btn-sm">Report Lost</a>
       <a href="${pagesPrefix}report-found.html" class="btn btn-secondary btn-sm">Report Found</a>
@@ -69,7 +73,7 @@ function updateNavbarAuth() {
         <span class="nav-unread-badge" id="navbar-unread-badge" style="display:none; position: absolute; top: 0; right: 2px; background: var(--color-error, #C84B4B); color: #fff; font-size: 0.625rem; font-weight: 700; border-radius: 999px; padding: 1px 5px; min-width: 14px; text-align: center; line-height: 1.3;"></span>
       </a>
       <div class="nav-user">
-        <div class="user-avatar-small" title="${session.user.name}">${initials}</div>
+        ${avatarHtml}
         <div class="user-dropdown">
           <div style="padding: 0.5rem 1rem; border-bottom: 1px solid var(--color-border-subtle, #F0EDE6);">
             <div style="font-weight:700; font-size: 0.875rem;">${session.user.name}</div>
