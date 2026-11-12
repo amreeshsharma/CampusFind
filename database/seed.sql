@@ -54,10 +54,10 @@ INSERT INTO items (id, user_id, category_id, title, description, item_type, colo
 (4, 4, 1, 'Black HP Laptop Charger (65W USB-C)', 'Left plugged into wall socket behind the reference bookshelves in the reading room.', 'lost', 'Black', 'Campus Library, Ground Floor', '2026-10-26', NULL, 'open', NULL),
 
 -- Item 5: Found by Admin at Cafeteria
-(5, 3, 3, 'College ID Card - CSE Dept', 'Found at counter 2. Belongs to student roll number 23CSE045.', 'found', 'White / Blue Lanyard', 'Cafeteria Counter 2', '2026-10-30', NULL, 'open', 'QR-FND-19402'),
+(5, 3, 3, 'College ID Card - CSE Dept', 'Found at counter 2. Belongs to student roll number 23CSE045.', 'found', 'White / Blue Lanyard', 'Cafeteria Counter 2', '2026-10-30', '/uploads/sample-idcard.jpg', 'open', 'QR-FND-19402'),
 
 -- Item 6: Found by Admin & Recovered
-(6, 3, 1, 'Noise Cancelling Wireless Earbuds Case', 'White magnetic charging case found under seat after cultural briefing in auditorium.', 'found', 'White', 'Main Auditorium, Row F', '2026-10-25', NULL, 'recovered', 'QR-FND-43921');
+(6, 3, 1, 'Noise Cancelling Wireless Earbuds Case', 'White magnetic charging case found under seat after cultural briefing in auditorium.', 'found', 'White', 'Main Auditorium, Row F', '2026-10-25', '/uploads/sample-earbuds.jpg', 'recovered', 'QR-FND-43921');
 
 -- -----------------------------------------------------------------------------
 -- 4. SEED CLAIMS
