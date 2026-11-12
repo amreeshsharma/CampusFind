@@ -47,16 +47,18 @@ const createItem = async (req, res, next) => {
 
     // 2. Resolve category ID
     let finalCategoryId = null;
-    if (category_id && !isNaN(parseInt(category_id, 10))) {
+    if (category_id && !isNaN(parseInt(category_id, 10)) && parseInt(category_id, 10) > 0) {
       finalCategoryId = parseInt(category_id, 10);
-    } else if (req.body.category) {
-      // Lookup category by name if name was provided
-      const [catRows] = await db.query(
-        'SELECT id FROM categories WHERE category_name LIKE ? LIMIT 1',
-        [`%${req.body.category.trim()}%`]
-      );
-      if (catRows.length > 0) {
-        finalCategoryId = catRows[0].id;
+    } else {
+      const catName = req.body.category || category_id;
+      if (catName && typeof catName === 'string') {
+        const [catRows] = await db.query(
+          'SELECT id FROM categories WHERE category_name LIKE ? OR category_name LIKE ? LIMIT 1',
+          [`%${catName.split('&')[0].trim()}%`, `%${catName.trim()}%`]
+        );
+        if (catRows.length > 0) {
+          finalCategoryId = catRows[0].id;
+        }
       }
     }
 
