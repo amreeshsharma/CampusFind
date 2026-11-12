@@ -145,7 +145,7 @@ const login = async (req, res, next) => {
 
     // Fetch user by email
     const [users] = await db.query(
-      'SELECT id, name, email, password, role, student_id, department, phone FROM users WHERE email = ?',
+      'SELECT id, name, email, password, role, student_id, department, phone, avatar_url FROM users WHERE email = ?',
       [email.toLowerCase().trim()]
     );
 
@@ -184,7 +184,8 @@ const login = async (req, res, next) => {
         role: user.role,
         student_id: user.student_id,
         department: user.department,
-        phone: user.phone
+        phone: user.phone,
+        avatar_url: user.avatar_url
       }
     });
   } catch (error) {
@@ -252,7 +253,7 @@ const updateProfile = async (req, res, next) => {
     );
 
     const [updated] = await db.query(
-      'SELECT id, name, email, role, student_id, department, phone FROM users WHERE id = ?',
+      'SELECT id, name, email, role, student_id, department, phone, avatar_url FROM users WHERE id = ?',
       [req.user.id]
     );
 
@@ -260,6 +261,79 @@ const updateProfile = async (req, res, next) => {
       success: true,
       message: 'Profile updated successfully.',
       user: updated[0]
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   POST /api/auth/verify-password
+ * @desc    Verify current password before allowing password modification
+ * @access  Private (authMiddleware)
+ */
+const verifyCurrentPassword = async (req, res, next) => {
+  try {
+    const { currentPassword } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is required.'
+      });
+    }
+
+    const [users] = await db.query('SELECT password FROM users WHERE id = ?', [req.user.id]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, users[0].password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        verified: false,
+        message: 'Current password provided is incorrect.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      verified: true,
+      message: 'Current password verified successfully.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   POST /api/auth/avatar
+ * @desc    Upload student profile photograph
+ * @access  Private (authMiddleware)
+ */
+const uploadAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select an image file to upload.'
+      });
+    }
+
+    const avatarUrl = `/uploads/${req.file.filename}`;
+    await db.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, req.user.id]);
+
+    const [users] = await db.query(
+      'SELECT id, name, email, role, student_id, department, phone, avatar_url FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile photo updated successfully.',
+      avatar_url: avatarUrl,
+      user: users[0]
     });
   } catch (error) {
     next(error);
@@ -353,6 +427,8 @@ module.exports = {
   getMe,
   updateProfile,
   changePassword,
+  verifyCurrentPassword,
+  uploadAvatar,
   getAllUsers
 };
 
