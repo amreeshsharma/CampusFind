@@ -66,7 +66,7 @@ const authMiddleware = async (req, res, next) => {
 
     // Fetch user from MySQL database (omitting password hash)
     const [users] = await db.query(
-      'SELECT id, name, email, role, student_id, department, phone, created_at FROM users WHERE id = ?',
+      'SELECT id, name, email, role, student_id, department, phone, avatar_url, created_at FROM users WHERE id = ?',
       [decoded.id]
     );
 

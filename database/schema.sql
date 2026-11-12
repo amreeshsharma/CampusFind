@@ -27,6 +27,7 @@ CREATE TABLE users (
   student_id VARCHAR(50) NULL,
   department VARCHAR(100) NULL,
   phone VARCHAR(20) NULL,
+  avatar_url VARCHAR(255) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_users_email (email),
   INDEX idx_users_role (role)
