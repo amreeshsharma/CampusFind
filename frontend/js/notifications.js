@@ -156,14 +156,14 @@ function renderNotificationsList(notifications, container) {
     const formattedTime = formatDate(n.created_at);
 
     return `
-      <div class="card card-hover" style="margin-bottom: 0.75rem; border-left: 4px solid ${isUnread ? 'var(--primary-color, #004953)' : 'var(--color-border, #E2D9CC)'}; background: ${isUnread ? '#FFFFFF' : '#FAF8F5'};">
+      <div class="card card-hover" id="notif-card-${n.id}" style="margin-bottom: 0.75rem; border-left: 4px solid ${isUnread ? 'var(--primary-color, #004953)' : 'var(--color-border, #E2D9CC)'}; background: ${isUnread ? '#FFFFFF' : '#FAF8F5'}; transition: all 0.25s ease;">
         <div class="card-body" style="padding: 1rem 1.25rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;">
           <div style="display: flex; gap: 0.85rem; align-items: flex-start; flex: 1;">
             <div style="font-size: 1.4rem; line-height: 1; padding-top: 0.15rem;">${icon}</div>
             <div style="flex: 1;">
               <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
                 ${typeBadge}
-                ${isUnread ? '<span class="badge badge-match" style="font-size:0.6rem; background: var(--color-error, #C84B4B); color:#fff;">UNREAD</span>' : ''}
+                ${isUnread ? '<span class="badge badge-match unread-tag" style="font-size:0.6rem; background: var(--color-error, #C84B4B); color:#fff;">UNREAD</span>' : ''}
                 <span style="font-size: 0.75rem; color: var(--color-text-muted);">⏱ ${formattedTime}</span>
               </div>
               <p style="font-size: 0.875rem; margin: 0; line-height: 1.5; color: var(--color-text-dark);">${n.message}</p>
@@ -175,7 +175,7 @@ function renderNotificationsList(notifications, container) {
                 ✓ Read
               </button>
             ` : ''}
-            <button class="btn btn-outline-secondary btn-sm" onclick="handleDeleteNotification(${n.id})" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; color: var(--color-error);" title="Delete notification">
+            <button class="btn btn-outline-secondary btn-sm" onclick="handleDeleteNotification(${n.id})" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; color: var(--color-error, #C84B4B);" title="Delete notification">
               🗑
             </button>
           </div>
@@ -185,32 +185,77 @@ function renderNotificationsList(notifications, container) {
   }).join('');
 }
 
-async function handleMarkSingleRead(notifId) {
+window.handleMarkSingleRead = async function(notifId) {
+  const card = document.getElementById(`notif-card-${notifId}`);
+  if (card) {
+    card.style.borderLeft = '4px solid var(--color-border, #E2D9CC)';
+    card.style.background = '#FAF8F5';
+    const unreadTag = card.querySelector('.unread-tag');
+    if (unreadTag) unreadTag.remove();
+    const readBtn = card.querySelector('button[title="Mark as read"]');
+    if (readBtn) readBtn.remove();
+  }
+  showToast('Notification marked as read.', 'info');
+  decrementNotificationCounters();
+
   try {
-    const res = await authFetch(`${CONFIG.API_BASE_URL}/notifications/${notifId}/read`, {
+    await authFetch(`${CONFIG.API_BASE_URL}/notifications/${notifId}/read`, {
       method: 'PUT'
     });
-    if (res.ok) {
-      showToast('Notification marked as read.', 'info');
-      const container = document.getElementById('notifications-feed-container');
-      if (container) await loadNotifications(container);
-    }
   } catch (err) {
-    console.error('Mark read error:', err);
+    console.warn('Mark read network note:', err);
   }
-}
+};
 
-async function handleDeleteNotification(notifId) {
+window.handleDeleteNotification = async function(notifId) {
+  const card = document.getElementById(`notif-card-${notifId}`);
+  if (card) {
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(20px)';
+    setTimeout(() => {
+      card.remove();
+      const container = document.getElementById('notifications-feed-container');
+      if (container && container.querySelectorAll('.card').length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <img src="../assets/images/empty-state.svg" class="empty-state-icon" alt="No notifications">
+            <h4 class="empty-state-title">No notifications yet</h4>
+            <p class="empty-state-text">You are all caught up! Updates regarding matching items, claim audits, and handover statuses will appear here.</p>
+          </div>
+        `;
+      }
+    }, 250);
+  }
+  showToast('Notification removed.', 'info');
+  decrementNotificationCounters();
+
   try {
-    const res = await authFetch(`${CONFIG.API_BASE_URL}/notifications/${notifId}`, {
+    await authFetch(`${CONFIG.API_BASE_URL}/notifications/${notifId}`, {
       method: 'DELETE'
     });
-    if (res.ok) {
-      showToast('Notification removed.', 'info');
-      const container = document.getElementById('notifications-feed-container');
-      if (container) await loadNotifications(container);
-    }
   } catch (err) {
-    console.error('Delete notification error:', err);
+    console.warn('Delete notification network note:', err);
+  }
+};
+
+function decrementNotificationCounters() {
+  const unreadPill = document.getElementById('notifications-unread-pill');
+  if (unreadPill && unreadPill.textContent) {
+    let count = parseInt(unreadPill.textContent, 10);
+    if (!isNaN(count) && count > 1) {
+      unreadPill.textContent = `${count - 1} Unread`;
+    } else if (unreadPill) {
+      unreadPill.style.display = 'none';
+    }
+  }
+
+  const navBadge = document.getElementById('navbar-unread-badge');
+  if (navBadge) {
+    let count = parseInt(navBadge.textContent, 10);
+    if (!isNaN(count) && count > 1) {
+      navBadge.textContent = count - 1;
+    } else {
+      navBadge.style.display = 'none';
+    }
   }
 }
