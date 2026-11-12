@@ -53,8 +53,15 @@ function renderUserInfo(user) {
   if (userNameElem) userNameElem.textContent = user.name;
   if (userRoleElem) userRoleElem.textContent = `${user.department || 'Student'} • ${user.student_id || user.email}`;
   if (userAvatarElem) {
-    const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'ST';
-    userAvatarElem.textContent = initials;
+    if (user.avatar_url) {
+      const fullUrl = user.avatar_url.startsWith('http')
+        ? user.avatar_url
+        : `${CONFIG.SERVER_URL}${user.avatar_url}`;
+      userAvatarElem.innerHTML = `<img src="${fullUrl}" alt="${user.name}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+    } else {
+      const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'ST';
+      userAvatarElem.textContent = initials;
+    }
   }
 }
 
@@ -184,7 +191,7 @@ function renderRecentNotifications(notifications) {
 
   if (!notifications || notifications.length === 0) {
     container.innerHTML = `
-      <p style="font-size: 0.875rem; color: var(--color-text-muted); margin: 0; text-align: center; padding: 1rem 0;">
+      <p style="font-size: 0.875rem; color: var(--color-text-muted); margin: 0; text-align: center; padding: 1.5rem 0;">
         No notifications logged yet.
       </p>
     `;
@@ -197,18 +204,92 @@ function renderRecentNotifications(notifications) {
     if (notif.notification_type === 'claim_approved' || notif.notification_type === 'item_recovered') color = 'var(--color-success, #23865B)';
     if (notif.notification_type === 'claim_rejected') color = 'var(--color-danger, #B83A2E)';
 
+    const isUnread = notif.is_read === 0 || notif.is_read === false;
+
     return `
-      <div class="activity-item" style="padding: 0.5rem 0;">
-        <div class="activity-bullet" style="background-color: ${color};"></div>
+      <div class="activity-item" id="notif-item-${notif.id}" style="padding: 0.75rem 0; border-bottom: 1px solid var(--color-border-subtle, #F0EDE6); display: flex; align-items: flex-start; gap: 0.75rem; transition: all 0.25s ease;">
+        <div class="activity-bullet" style="background-color: ${color}; margin-top: 0.35rem;"></div>
         <div style="flex: 1;">
-          <div class="activity-text" style="font-size: 0.8125rem; line-height: 1.4;">${notif.message}</div>
-          <div class="activity-time" style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 0.2rem;">
-            ⏱ ${formatDate(notif.created_at)}
+          <div class="activity-text" style="font-size: 0.8125rem; line-height: 1.4; font-weight: ${isUnread ? '600' : '400'};">
+            ${notif.message}
           </div>
+          <div class="activity-time" style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>⏱ ${formatDate(notif.created_at)}</span>
+            ${isUnread ? '<span class="badge" style="background: #C84B4B; color: #fff; font-size: 0.6rem; padding: 0.1rem 0.4rem;">NEW</span>' : ''}
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.35rem; align-items: center; flex-shrink: 0;">
+          ${isUnread ? `
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="handleDashboardMarkRead(${notif.id})" style="font-size: 0.7rem; padding: 0.2rem 0.45rem;" title="Mark as read">
+              ✓
+            </button>
+          ` : ''}
+          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="handleDashboardDeleteNotif(${notif.id})" style="font-size: 0.7rem; padding: 0.2rem 0.45rem; color: var(--color-error, #C84B4B);" title="Delete notification">
+            🗑
+          </button>
         </div>
       </div>
     `;
   }).join('');
+}
+
+window.handleDashboardMarkRead = async function(notifId) {
+  const itemElem = document.getElementById(`notif-item-${notifId}`);
+  if (itemElem) {
+    const textElem = itemElem.querySelector('.activity-text');
+    if (textElem) textElem.style.fontWeight = '400';
+    const badgeElem = itemElem.querySelector('.badge');
+    if (badgeElem) badgeElem.remove();
+    const readBtn = itemElem.querySelector('button[title="Mark as read"]');
+    if (readBtn) readBtn.remove();
+  }
+  showToast('Notification marked as read.', 'info');
+
+  try {
+    await authFetch(`${CONFIG.API_BASE_URL}/notifications/${notifId}/read`, { method: 'PUT' });
+    updateDashboardBadges();
+  } catch (err) {
+    console.warn('Mark read network note:', err);
+  }
+};
+
+window.handleDashboardDeleteNotif = async function(notifId) {
+  const itemElem = document.getElementById(`notif-item-${notifId}`);
+  if (itemElem) {
+    itemElem.style.opacity = '0';
+    itemElem.style.transform = 'translateX(15px)';
+    setTimeout(() => {
+      itemElem.remove();
+      const container = document.getElementById('recent-activity-list');
+      if (container && container.children.length === 0) {
+        container.innerHTML = `
+          <p style="font-size: 0.875rem; color: var(--color-text-muted); margin: 0; text-align: center; padding: 1.5rem 0;">
+            No notifications logged yet.
+          </p>
+        `;
+      }
+    }, 250);
+  }
+  showToast('Notification removed.', 'info');
+
+  try {
+    await authFetch(`${CONFIG.API_BASE_URL}/notifications/${notifId}`, { method: 'DELETE' });
+    updateDashboardBadges();
+  } catch (err) {
+    console.warn('Delete notif network note:', err);
+  }
+};
+
+function updateDashboardBadges() {
+  const navBadge = document.getElementById('navbar-unread-badge');
+  if (navBadge) {
+    let current = parseInt(navBadge.textContent, 10);
+    if (!isNaN(current) && current > 1) {
+      navBadge.textContent = current - 1;
+    } else {
+      navBadge.style.display = 'none';
+    }
+  }
 }
 
 function renderSuggestedMatchesList(matches) {
@@ -227,11 +308,18 @@ function renderSuggestedMatchesList(matches) {
   }
 
   container.innerHTML = matches.map(m => {
-    let imgSrc = '../assets/images/hero-illustration.svg';
+    let imgSrc = '../assets/images/hero-campus.jpg';
     if (m.foundItem.image_path) {
       imgSrc = m.foundItem.image_path.startsWith('http')
         ? m.foundItem.image_path
         : `${CONFIG.SERVER_URL}${m.foundItem.image_path}`;
+    } else {
+      const text = `${m.foundItem.title || ''}`.toLowerCase();
+      if (text.includes('calc')) imgSrc = '../assets/images/sample-calculator.jpg';
+      else if (text.includes('bottle') || text.includes('flask')) imgSrc = '../assets/images/sample-bottle.jpg';
+      else if (text.includes('earbud') || text.includes('headphone')) imgSrc = '../assets/images/sample-earbuds.jpg';
+      else if (text.includes('id') || text.includes('card')) imgSrc = '../assets/images/sample-idcard.jpg';
+      else if (text.includes('key')) imgSrc = '../assets/images/sample-keys.jpg';
     }
 
     return `
@@ -245,7 +333,7 @@ function renderSuggestedMatchesList(matches) {
           </div>
 
           <div style="display: flex; gap: 1rem; align-items: flex-start;">
-            <img src="${imgSrc}" alt="${m.foundItem.title}" style="width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--color-border-subtle);" onerror="this.src='../assets/images/hero-illustration.svg'">
+            <img src="${imgSrc}" alt="${m.foundItem.title}" style="width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--color-border-subtle);" onerror="this.src='../assets/images/hero-campus.jpg'">
             <div style="flex: 1;">
               <h4 style="font-size: 1rem; margin-bottom: 0.2rem;">${m.foundItem.title}</h4>
               <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 0.35rem;">
