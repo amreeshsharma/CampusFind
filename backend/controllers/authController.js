@@ -3,6 +3,8 @@
  * Handles student registration, credential validation, JWT issuance, and HTTP-only cookie management
  */
 
+const fs = require('fs');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { db } = require('../config/db');
@@ -322,6 +324,21 @@ const uploadAvatar = async (req, res, next) => {
     }
 
     const avatarUrl = `/uploads/${req.file.filename}`;
+    
+    // Sync to root uploads and frontend/uploads for dev servers
+    try {
+      const rootUploadDir = path.join(__dirname, '..', '..', 'uploads');
+      const frontendUploadDir = path.join(__dirname, '..', '..', 'frontend', 'uploads');
+      if (fs.existsSync(rootUploadDir)) {
+        fs.copyFileSync(req.file.path, path.join(rootUploadDir, req.file.filename));
+      }
+      if (fs.existsSync(frontendUploadDir)) {
+        fs.copyFileSync(req.file.path, path.join(frontendUploadDir, req.file.filename));
+      }
+    } catch (syncErr) {
+      console.warn('Uploads sync notice:', syncErr.message);
+    }
+
     await db.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, req.user.id]);
 
     const [users] = await db.query(
