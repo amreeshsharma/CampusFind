@@ -128,19 +128,32 @@ async function fetchAndRenderItems(container, filters = {}) {
 // Helper to determine the best realistic photograph for any item
 function getItemImageUrl(imagePath, itemTitle = '', itemCategory = '', assetsPrefix = '') {
   if (imagePath && typeof imagePath === 'string') {
-    if (imagePath.startsWith('http') || imagePath.startsWith('../') || imagePath.startsWith('./')) {
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
       return imagePath;
     }
-    return `${CONFIG.SERVER_URL}${imagePath}`;
+    // If imagePath is an upload path (from MySQL backend)
+    if (imagePath.startsWith('/uploads/') || imagePath.startsWith('uploads/')) {
+      const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+      return `${CONFIG.SERVER_URL}${cleanPath}`;
+    }
+    // If imagePath is a sample file name or relative asset path
+    const cleanAsset = imagePath.replace(/^(\.\.\/|\.\/)*assets\/images\//, '').replace(/^\/+/, '');
+    if (cleanAsset.endsWith('.jpg') || cleanAsset.endsWith('.png') || cleanAsset.endsWith('.svg') || cleanAsset.endsWith('.webp')) {
+      return `${assetsPrefix}assets/images/${cleanAsset}`;
+    }
   }
 
-  // Realistic product photograph fallbacks based on item title or category
+  // Realistic product photograph fallbacks based on item title or category keywords
   const text = `${itemTitle} ${itemCategory}`.toLowerCase();
   if (text.includes('calc')) return `${assetsPrefix}assets/images/sample-calculator.jpg`;
-  if (text.includes('bottle') || text.includes('flask') || text.includes('container') || text.includes('hydro')) return `${assetsPrefix}assets/images/sample-bottle.jpg`;
-  if (text.includes('earbud') || text.includes('headphone') || text.includes('audio') || text.includes('airpod')) return `${assetsPrefix}assets/images/sample-earbuds.jpg`;
-  if (text.includes('id') || text.includes('card') || text.includes('wallet') || text.includes('lanyard')) return `${assetsPrefix}assets/images/sample-idcard.jpg`;
-  if (text.includes('key')) return `${assetsPrefix}assets/images/sample-keys.jpg`;
+  if (text.includes('bottle') || text.includes('flask') || text.includes('container') || text.includes('hydro') || text.includes('water')) return `${assetsPrefix}assets/images/sample-bottle.jpg`;
+  if (text.includes('earbud') || text.includes('headphone') || text.includes('audio') || text.includes('airpod') || text.includes('buds')) return `${assetsPrefix}assets/images/sample-earbuds.jpg`;
+  if (text.includes('charger') || text.includes('cable') || text.includes('adapter') || text.includes('power bank') || text.includes('usb') || text.includes('cord')) return `${assetsPrefix}assets/images/sample-charger.jpg`;
+  if (text.includes('wallet') || text.includes('purse') || text.includes('pouch')) return `${assetsPrefix}assets/images/sample-wallet.jpg`;
+  if (text.includes('id') || text.includes('card') || text.includes('lanyard') || text.includes('badge')) return `${assetsPrefix}assets/images/sample-idcard.jpg`;
+  if (text.includes('key') || text.includes('chain') || text.includes('lock')) return `${assetsPrefix}assets/images/sample-keys.jpg`;
+  if (text.includes('backpack') || text.includes('bag') || text.includes('sack')) return `${assetsPrefix}assets/images/sample-backpack.jpg`;
+  if (text.includes('notebook') || text.includes('book') || text.includes('journal') || text.includes('notes') || text.includes('diary')) return `${assetsPrefix}assets/images/sample-notebook.jpg`;
   
   return `${assetsPrefix}assets/images/hero-campus.jpg`;
 }
