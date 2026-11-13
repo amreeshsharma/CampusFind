@@ -61,8 +61,14 @@ function updateNavbarAuth() {
       ? session.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
       : 'U';
 
-    const avatarHtml = session.user.avatar_url
-      ? `<img src="${session.user.avatar_url.startsWith('http') ? session.user.avatar_url : `${CONFIG.SERVER_URL}${session.user.avatar_url}`}" alt="${session.user.name}" class="user-avatar-small" style="object-fit: cover; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--secondary-color);">`
+    const avatarUrl = session.user.avatar_url
+      ? (session.user.avatar_url.startsWith('http://') || session.user.avatar_url.startsWith('https://') || session.user.avatar_url.startsWith('data:')
+          ? session.user.avatar_url
+          : `${CONFIG.SERVER_URL}${session.user.avatar_url.startsWith('/') ? '' : '/'}${session.user.avatar_url}`)
+      : null;
+
+    const avatarHtml = avatarUrl
+      ? `<img src="${avatarUrl}" alt="${session.user.name}" class="user-avatar-small" style="object-fit: cover; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--secondary-color);" onerror="this.onerror=null; this.outerHTML='<div class=\\'user-avatar-small\\' title=\\'${session.user.name}\\'>${initials}</div>';">`
       : `<div class="user-avatar-small" title="${session.user.name}">${initials}</div>`;
 
     authContainer.innerHTML = `
