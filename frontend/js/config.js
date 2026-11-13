@@ -4,8 +4,14 @@
  */
 
 const getBaseServerUrl = () => {
-  if (typeof window !== 'undefined' && window.location.origin && window.location.origin.includes(':5000')) {
-    return window.location.origin;
+  if (typeof window !== 'undefined' && window.location) {
+    if (window.location.origin && window.location.origin.includes(':5000')) {
+      return window.location.origin;
+    }
+    const hostname = window.location.hostname;
+    if (hostname && hostname !== '' && window.location.protocol !== 'file:') {
+      return `http://${hostname}:5000`;
+    }
   }
   return 'http://localhost:5000';
 };
