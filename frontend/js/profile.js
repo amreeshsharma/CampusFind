@@ -98,19 +98,26 @@ function renderAvatar(user) {
   const avatarInitials = document.getElementById('profile-avatar-display');
   const avatarImg = document.getElementById('profile-avatar-img');
 
-  const initials = user.name
+  const initials = user && user.name
     ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
     : 'U';
 
-  if (user.avatar_url) {
-    const fullUrl = user.avatar_url.startsWith('http')
+  if (user && user.avatar_url) {
+    const fullUrl = user.avatar_url.startsWith('http://') || user.avatar_url.startsWith('https://') || user.avatar_url.startsWith('data:')
       ? user.avatar_url
-      : `${CONFIG.SERVER_URL}${user.avatar_url}`;
+      : `${CONFIG.SERVER_URL}${user.avatar_url.startsWith('/') ? '' : '/'}${user.avatar_url}`;
 
     if (avatarImg) {
       avatarImg.src = fullUrl;
       avatarImg.style.display = 'block';
       avatarImg.onerror = () => {
+        // Fallback: If absolute port fetch fails, attempt relative path (useful if served from same origin)
+        if (!fullUrl.startsWith('data:') && !avatarImg.dataset.retried) {
+          avatarImg.dataset.retried = 'true';
+          const relativePath = user.avatar_url.startsWith('/') ? user.avatar_url : `/${user.avatar_url}`;
+          avatarImg.src = relativePath;
+          return;
+        }
         avatarImg.style.display = 'none';
         if (avatarInitials) {
           avatarInitials.style.display = 'flex';
@@ -183,16 +190,39 @@ function setupAvatarUpload(session) {
 
       // Update session in storage
       const activeSession = getUserSession();
-      if (activeSession && result.user) {
-        setUserSession(result.user, activeSession.token);
+      const updatedUser = result.user || (activeSession && activeSession.user);
+      if (activeSession && updatedUser) {
+        setUserSession(updatedUser, activeSession.token);
       }
+
+      // Re-render avatar immediately on profile card
+      renderAvatar(updatedUser);
 
       // Re-render navbar avatar if function available
       if (typeof updateNavbarAuth === 'function') {
         updateNavbarAuth();
       }
     } catch (err) {
-      showToast(err.message, 'error');
+      console.error('Avatar upload notice:', err);
+      // Graceful offline fallback: if backend is down or fetch failed, save to browser storage
+      if (err.message.includes('fetch') || err.message.includes('Network') || err.message.includes('Failed')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target.result;
+          const activeSession = getUserSession();
+          if (activeSession && activeSession.user) {
+            activeSession.user.avatar_url = dataUrl;
+            setUserSession(activeSession.user, activeSession.token);
+            renderAvatar(activeSession.user);
+            if (typeof updateNavbarAuth === 'function') updateNavbarAuth();
+          }
+        };
+        reader.readAsDataURL(file);
+        uploadBtn.style.display = 'none';
+        showToast('Saved to browser session. Start backend on port 5000 to persist to MySQL database.', 'warning', 6000);
+      } else {
+        showToast(err.message, 'error');
+      }
     } finally {
       uploadBtn.disabled = false;
       uploadBtn.textContent = originalText;
