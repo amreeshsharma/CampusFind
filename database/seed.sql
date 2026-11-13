@@ -51,13 +51,22 @@ INSERT INTO items (id, user_id, category_id, title, description, item_type, colo
 (3, 2, 4, 'Blue Hydro Flask Water Bottle', 'Found on study desk #14 near computer terminals. Metallic 32oz bottle with stickers.', 'found', 'Ocean Blue', 'Central Library, 2nd Floor', '2026-10-28', '/uploads/sample-bottle.jpg', 'open', 'QR-FND-33412'),
 
 -- Item 4: Lost by Karan Verma
-(4, 4, 1, 'Black HP Laptop Charger (65W USB-C)', 'Left plugged into wall socket behind the reference bookshelves in the reading room.', 'lost', 'Black', 'Campus Library, Ground Floor', '2026-10-26', NULL, 'open', NULL),
+(4, 4, 1, 'Black HP Laptop Charger (65W USB-C)', 'Left plugged into wall socket behind the reference bookshelves in the reading room.', 'lost', 'Black', 'Campus Library, Ground Floor', '2026-10-26', '/uploads/sample-charger.jpg', 'open', NULL),
 
 -- Item 5: Found by Admin at Cafeteria
 (5, 3, 3, 'College ID Card - CSE Dept', 'Found at counter 2. Belongs to student roll number 23CSE045.', 'found', 'White / Blue Lanyard', 'Cafeteria Counter 2', '2026-10-30', '/uploads/sample-idcard.jpg', 'open', 'QR-FND-19402'),
 
 -- Item 6: Found by Admin & Recovered
-(6, 3, 1, 'Noise Cancelling Wireless Earbuds Case', 'White magnetic charging case found under seat after cultural briefing in auditorium.', 'found', 'White', 'Main Auditorium, Row F', '2026-10-25', '/uploads/sample-earbuds.jpg', 'recovered', 'QR-FND-43921');
+(6, 3, 1, 'Noise Cancelling Wireless Earbuds Case', 'White magnetic charging case found under seat after cultural briefing in auditorium.', 'found', 'White', 'Main Auditorium, Row F', '2026-10-25', '/uploads/sample-earbuds.jpg', 'recovered', 'QR-FND-43921'),
+
+-- Item 7: Found by Admin at Library (Leather Wallet)
+(7, 3, 3, 'Leather Wallet with Metro Card', 'Brown and black tri-fold leather wallet found near Reference Section. Contains metro card and library card.', 'found', 'Brown / Black', 'Central Library, Ground Floor', '2026-11-01', '/uploads/sample-wallet.jpg', 'open', 'QR-FND-WALLET-104'),
+
+-- Item 8: Found at Seminar Hall (Backpack)
+(8, 1, 6, 'Navy Blue Campus Backpack', 'Has 15.6 inch laptop sleeve with side bottle pocket, found in Seminar Hall 2.', 'found', 'Navy Blue', 'Seminar Hall 2, Block B', '2026-11-02', '/uploads/sample-backpack.jpg', 'open', 'QR-FND-BAG-991'),
+
+-- Item 9: Lost by Student (Lab Notebook)
+(9, 4, 2, 'Green Spiral Lab Journal & Notes', 'Engineering Chemistry lab manual with blue pen attached to the ring binder.', 'lost', 'Green', 'Central Library, 1st Floor', '2026-11-01', '/uploads/sample-notebook.jpg', 'open', NULL);
 
 -- -----------------------------------------------------------------------------
 -- 4. SEED CLAIMS
