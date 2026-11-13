@@ -53,13 +53,13 @@ function renderUserInfo(user) {
   if (userNameElem) userNameElem.textContent = user.name;
   if (userRoleElem) userRoleElem.textContent = `${user.department || 'Student'} • ${user.student_id || user.email}`;
   if (userAvatarElem) {
+    const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'ST';
     if (user.avatar_url) {
-      const fullUrl = user.avatar_url.startsWith('http')
+      const fullUrl = user.avatar_url.startsWith('http://') || user.avatar_url.startsWith('https://') || user.avatar_url.startsWith('data:')
         ? user.avatar_url
-        : `${CONFIG.SERVER_URL}${user.avatar_url}`;
-      userAvatarElem.innerHTML = `<img src="${fullUrl}" alt="${user.name}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+        : `${CONFIG.SERVER_URL}${user.avatar_url.startsWith('/') ? '' : '/'}${user.avatar_url}`;
+      userAvatarElem.innerHTML = `<img src="${fullUrl}" alt="${user.name}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.parentElement.textContent='${initials}';">`;
     } else {
-      const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'ST';
       userAvatarElem.textContent = initials;
     }
   }
@@ -310,16 +310,26 @@ function renderSuggestedMatchesList(matches) {
   container.innerHTML = matches.map(m => {
     let imgSrc = '../assets/images/hero-campus.jpg';
     if (m.foundItem.image_path) {
-      imgSrc = m.foundItem.image_path.startsWith('http')
-        ? m.foundItem.image_path
-        : `${CONFIG.SERVER_URL}${m.foundItem.image_path}`;
+      if (m.foundItem.image_path.startsWith('http://') || m.foundItem.image_path.startsWith('https://') || m.foundItem.image_path.startsWith('data:')) {
+        imgSrc = m.foundItem.image_path;
+      } else if (m.foundItem.image_path.startsWith('/uploads/') || m.foundItem.image_path.startsWith('uploads/')) {
+        const cleanPath = m.foundItem.image_path.startsWith('/') ? m.foundItem.image_path : `/${m.foundItem.image_path}`;
+        imgSrc = `${CONFIG.SERVER_URL}${cleanPath}`;
+      } else {
+        const cleanAsset = m.foundItem.image_path.replace(/^(\.\.\/|\.\/)*assets\/images\//, '').replace(/^\/+/, '');
+        imgSrc = `../assets/images/${cleanAsset}`;
+      }
     } else {
-      const text = `${m.foundItem.title || ''}`.toLowerCase();
+      const text = `${m.foundItem.title || ''} ${m.foundItem.category || ''}`.toLowerCase();
       if (text.includes('calc')) imgSrc = '../assets/images/sample-calculator.jpg';
-      else if (text.includes('bottle') || text.includes('flask')) imgSrc = '../assets/images/sample-bottle.jpg';
-      else if (text.includes('earbud') || text.includes('headphone')) imgSrc = '../assets/images/sample-earbuds.jpg';
-      else if (text.includes('id') || text.includes('card')) imgSrc = '../assets/images/sample-idcard.jpg';
+      else if (text.includes('bottle') || text.includes('flask') || text.includes('water')) imgSrc = '../assets/images/sample-bottle.jpg';
+      else if (text.includes('earbud') || text.includes('headphone') || text.includes('airpod')) imgSrc = '../assets/images/sample-earbuds.jpg';
+      else if (text.includes('charger') || text.includes('cable') || text.includes('adapter')) imgSrc = '../assets/images/sample-charger.jpg';
+      else if (text.includes('wallet') || text.includes('purse')) imgSrc = '../assets/images/sample-wallet.jpg';
+      else if (text.includes('id') || text.includes('card') || text.includes('lanyard')) imgSrc = '../assets/images/sample-idcard.jpg';
       else if (text.includes('key')) imgSrc = '../assets/images/sample-keys.jpg';
+      else if (text.includes('backpack') || text.includes('bag')) imgSrc = '../assets/images/sample-backpack.jpg';
+      else if (text.includes('notebook') || text.includes('book') || text.includes('journal')) imgSrc = '../assets/images/sample-notebook.jpg';
     }
 
     return `
