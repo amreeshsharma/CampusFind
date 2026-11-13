@@ -63,7 +63,22 @@ const createItem = async (req, res, next) => {
     }
 
     // 3. Image path if uploaded via Multer
-    const image_path = req.file ? `/uploads/${req.file.filename}` : null;
+    let image_path = null;
+    if (req.file) {
+      image_path = `/uploads/${req.file.filename}`;
+      try {
+        const rootUploadDir = path.join(__dirname, '..', '..', 'uploads');
+        const frontendUploadDir = path.join(__dirname, '..', '..', 'frontend', 'uploads');
+        if (fs.existsSync(rootUploadDir)) {
+          fs.copyFileSync(req.file.path, path.join(rootUploadDir, req.file.filename));
+        }
+        if (fs.existsSync(frontendUploadDir)) {
+          fs.copyFileSync(req.file.path, path.join(frontendUploadDir, req.file.filename));
+        }
+      } catch (syncErr) {
+        console.warn('Uploads sync notice:', syncErr.message);
+      }
+    }
 
     // 4. Generate unique QR Token for found items
     let qr_token = null;
