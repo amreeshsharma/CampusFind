@@ -14,9 +14,11 @@ frontend/uploads/*
 backend/uploads/*
 !backend/uploads/.gitkeep
 
-# Operating System files
+# Operating System and Editor lock files
 .DS_Store
 Thumbs.db
+.~lock.*#
+~$*
 
 # Log files
 *.log
