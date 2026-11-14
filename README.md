@@ -129,15 +129,15 @@ Open `http://localhost:5500` in your web browser.
 ## 📅 Development Roadmap (10 Phases)
 
 - [x] **Phase 1**: Project Setup, Folder Architecture, Brand Variables, Express Server Baseline
-- [ ] **Phase 2**: UI/UX & Frontend Foundation (Landing, Auth, Responsive Design)
-- [ ] **Phase 3**: MySQL Database Schema, Connection Pool, and Seed Dataset
-- [ ] **Phase 4**: JWT Authentication, Role-based Middleware & Profile APIs
-- [ ] **Phase 5**: Lost and Found Item Management with Multer Uploads
-- [ ] **Phase 6**: Rule-Based Smart Item Matching Engine
-- [ ] **Phase 7**: Ownership Claims Workflow & QR Code Verification System
-- [ ] **Phase 8**: Student & Admin Dashboards with Chart.js Analytics
-- [ ] **Phase 9**: Full End-to-End Integration, Validation & Security Audit
-- [ ] **Phase 10**: Polishing, Demonstration Readiness & Academic Presentation Pack
+- [x] **Phase 2**: UI/UX & Frontend Foundation (Landing, Auth, Responsive Design)
+- [x] **Phase 3**: MySQL Database Schema, Connection Pool, and Seed Dataset
+- [x] **Phase 4**: JWT Authentication, Role-based Middleware & Profile APIs
+- [x] **Phase 5**: Lost and Found Item Management with Multer Uploads
+- [x] **Phase 6**: Rule-Based Smart Item Matching Engine
+- [x] **Phase 7**: Ownership Claims Workflow & QR Code Verification System
+- [x] **Phase 8**: Student & Admin Dashboards with Chart.js Analytics
+- [x] **Phase 9**: Full End-to-End Integration, Validation & Security Audit
+- [x] **Phase 10**: Polishing, Demonstration Readiness & Academic Presentation Pack (`CampusFind_PBL_Report.docx`, `CampusFind_PBL_Presentation.pptx`)
 
 ---
 
