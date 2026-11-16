@@ -89,40 +89,77 @@ CampusFind/
 - **npm** (v9.0.0 or higher)
 - **MySQL Server** (v8.0 or XAMPP / MariaDB)
 
-### 1. Clone & Enter Directory
-```bash
-cd PBL_WT/backend
-```
+---
 
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env`:
+### 1. Configure Environment Variables
+Navigate to the `backend/` directory and configure the environment:
 ```bash
+cd backend
 cp .env.example .env
 ```
-Update your MySQL credentials (`DB_USER`, `DB_PASSWORD`, `DB_NAME`).
+Ensure your MySQL credentials (`DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`) match your local MySQL configuration in `backend/.env`.
 
-### 3. Install Dependencies
+---
+
+### 2. Install Dependencies
+Inside the `backend/` directory:
 ```bash
 npm install
 ```
 
+---
+
+### 3. Initialize & Seed Database
+Run the automated initialization script to create the database (`campusfind_db`), apply schema DDL, and populate demonstration seed data:
+```bash
+npm run db:setup
+```
+*(Alternatively, import manually via MySQL client: `mysql -u root -p < ../database/schema.sql && mysql -u root -p < ../database/seed.sql`)*
+
+---
+
 ### 4. Start Backend Server
+From the `backend/` directory:
 ```bash
 # Production start
 npm start
 
-# Development mode with hot-reload
+# Or development mode with auto-reload (nodemon)
 npm run dev
 ```
-The server will boot at `http://localhost:5000` with a verified health endpoint at `http://localhost:5000/api/health`.
+The backend server runs at **`http://localhost:5000`**.
+- Health Check: `http://localhost:5000/api/health`
+- API Overview: `http://localhost:5000/api`
 
-### 5. Launch Frontend
-Serve the `frontend/` directory using VS Code Live Server or any static HTTP server:
+---
+
+### 5. Launch Frontend Application
+You can access the frontend in either of two ways:
+
+#### Option A: Directly via Backend (Recommended & Easiest)
+Since Express serves the static `frontend/` files out of the box, simply open:
+👉 **`http://localhost:5000`** in your browser.
+
+#### Option B: Standalone Static Server (Port 5500)
+From the project root directory:
 ```bash
-# Using npx serve or Live Server extension
-npx serve ../frontend -p 5500
+# Using npx serve
+npx serve frontend -p 5500 --no-clipboard
+
+# Or using Python 3
+python3 -m http.server 5500 --directory frontend
 ```
-Open `http://localhost:5500` in your web browser.
+👉 Open **`http://localhost:5500`** in your browser.
+
+---
+
+### 🔑 Demo Login Credentials
+
+| Role | Name | Email | Password |
+|---|---|---|---|
+| **Student** | Alex Patel | `alex.patel@campus.edu` | `Password123!` |
+| **Student** | Priya Sharma | `priya.sharma@campus.edu` | `Password123!` |
+| **Admin** | Campus Security | `admin@campusfind.edu` | `AdminMaster2026!` |
 
 ---
 
