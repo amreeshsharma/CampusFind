@@ -183,3 +183,117 @@ python3 -m http.server 5500 --directory frontend
 - **Subject**: Web Technology Project-Based Learning (PBL)
 - **Year / Semester**: 2nd Year / 4th Semester
 
+---
+
+## 🔧 Troubleshooting
+
+### ❌ EADDRINUSE — Port already in use
+
+```
+Error: listen EADDRINUSE: address already in use :::5000
+```
+
+Another process is still holding port 5000 (usually a zombie server left after closing the terminal).
+
+**Windows (PowerShell):**
+```powershell
+netstat -ano | findstr :5000   # find the PID in the last column
+taskkill /PID <pid> /F         # replace <pid> with the number found above
+```
+Or use the helper script from the `backend/` folder:
+```bash
+npm run free-port
+```
+
+**macOS / Linux:**
+```bash
+lsof -i :5000   # find the PID
+kill -9 <pid>
+```
+
+> **Prevention:** Always stop the server with **Ctrl + C**. Do NOT just close the terminal window — this may leave an orphan process holding the port.
+
+---
+
+### 🔄 Changing the Port
+
+1. Open `backend/.env` and set `PORT=5001` (or any free port).
+2. Restart the server: `npm run dev` from `backend/`.
+3. Access the app at **`http://localhost:5001`** — the frontend auto-detects the port.
+
+---
+
+### 🔒 EACCES — Permission denied on port
+
+Ports below 1024 are restricted. Set a port > 1024 in `backend/.env`:
+```
+PORT=5000
+```
+
+---
+
+### 🛢️ ECONNREFUSED / "Access denied for user" (MySQL)
+
+MySQL is not running or the credentials are wrong.
+
+1. **Start MySQL:**
+   - Windows (XAMPP): Start the MySQL service in the XAMPP control panel.
+   - Windows (MySQL 8): `net start MySQL80` in an elevated PowerShell.
+   - Linux: `sudo service mysql start`
+
+2. **Verify credentials** in `backend/.env`:
+   ```
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=your_password
+   DB_NAME=campusfind_db
+   ```
+
+3. **MySQL 8 auth mode error** (`ER_NOT_SUPPORTED_AUTH_MODE`):
+   ```sql
+   ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'your_password';
+   FLUSH PRIVILEGES;
+   ```
+
+4. **Re-create the database:**
+   ```bash
+   cd backend
+   npm run db:setup
+   ```
+
+---
+
+### 🌐 CORS Errors in Browser Console
+
+```
+Access to fetch at 'http://localhost:5000/api/...' from origin 'http://localhost:5500' has been blocked by CORS policy
+```
+
+Add your frontend origin to `CORS_ORIGINS` in `backend/.env`:
+```
+CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
+```
+Then restart the server.
+
+---
+
+### 🔐 JWT_SECRET Missing
+
+```
+[FATAL CONFIG ERROR]: JWT_SECRET is not defined!
+```
+
+Add a secret to `backend/.env`:
+```
+JWT_SECRET=campusfind_super_secure_jwt_secret_key_change_in_production_2026
+```
+
+---
+
+### 🛑 How to Stop the Server Properly
+
+Press **Ctrl + C** in the terminal where `npm run dev` / `npm start` is running. The server will close the HTTP listener, release the MySQL pool, and exit cleanly.
+
+**Do NOT** just close the terminal window — the Node process may keep running in the background and hold the port.
+
