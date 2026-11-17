@@ -7,14 +7,31 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 
 // Load environment variables
 dotenv.config();
 
+// Fail fast if JWT_SECRET is missing
+if (!process.env.JWT_SECRET) {
+  console.error('====================================================');
+  console.error('[FATAL CONFIG ERROR]: JWT_SECRET is not defined!');
+  console.error('Fix: Set a secure JWT_SECRET in your backend/.env file.');
+  console.error('Example: JWT_SECRET=campusfind_super_secure_jwt_secret_key_change_in_production_2026');
+  console.error('====================================================');
+  process.exit(1);
+}
+
+// Ensure backend uploads directory exists automatically on startup
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 // Import database connection
-const { testConnection } = require('./config/db');
+const { testConnection, pool } = require('./config/db');
 
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
@@ -33,7 +50,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware: Cross-Origin Resource Sharing (CORS) with Credentials
-const allowedOrigins = [
+const defaultOrigins = [
   'http://localhost:5500',
   'http://127.0.0.1:5500',
   'http://localhost:5000',
@@ -42,13 +59,24 @@ const allowedOrigins = [
   'http://127.0.0.1:3000'
 ];
 
+const envOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+  : (process.env.FRONTEND_URL && process.env.FRONTEND_URL !== '*'
+      ? process.env.FRONTEND_URL.split(',').map(o => o.trim()).filter(Boolean)
+      : []);
+
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow non-browser agents (Postman, curl), file:// origins ('null'), or defined local ports
-    if (!origin || origin === 'null' || allowedOrigins.includes(origin) || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+    // Allow non-browser agents (Postman, curl), file:// origins ('null')
+    if (!origin || origin === 'null') {
       return callback(null, true);
     }
-    return callback(null, true);
+    if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS error: Origin '${origin}' is not allowed by CORS configuration.`));
   },
   credentials: true
 }));
@@ -113,8 +141,47 @@ app.use('/api', (req, res) => {
 // Global Error Handler Middleware
 app.use(errorHandler);
 
-// Start the Express Server
-app.listen(PORT, async () => {
+// ─── Graceful Shutdown ───────────────────────────────────────────────────────
+let isShuttingDown = false;
+
+function gracefulShutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`\n[CampusFind] ${signal} received — shutting down gracefully...`);
+
+  // Force-exit if shutdown hangs beyond 5 seconds
+  const forceTimer = setTimeout(() => {
+    console.error('[CampusFind] Force-exit after 5 s timeout.');
+    process.exit(1);
+  }, 5000);
+  forceTimer.unref(); // Don't block the event loop
+
+  server.close(() => {
+    console.log('[CampusFind] HTTP server closed. Releasing MySQL pool...');
+    pool.end(() => {
+      console.log('[CampusFind] MySQL pool closed. Goodbye!');
+      clearTimeout(forceTimer);
+      process.exit(0);
+    });
+  });
+}
+
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // nodemon restart
+
+process.on('uncaughtException', (err) => {
+  console.error('[CampusFind] Uncaught Exception:', err.message);
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[CampusFind] Unhandled Promise Rejection:', reason);
+  gracefulShutdown('unhandledRejection');
+});
+
+// ─── Start the Express Server ─────────────────────────────────────────────────
+const server = app.listen(PORT, async () => {
   console.log(`====================================================`);
   console.log(` CampusFind 2.0 Web Application & API Running!`);
   console.log(` Web App URL : http://localhost:${PORT}`);
@@ -133,4 +200,31 @@ app.listen(PORT, async () => {
   await testConnection();
 });
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n[CampusFind] ERROR: Port ${PORT} is already in use.`);
+    console.error(`  Stop the other process first, then restart.`);
+    console.error(`\n  Windows (PowerShell):`);
+    console.error(`    netstat -ano | findstr :${PORT}`);
+    console.error(`    taskkill /PID <pid> /F`);
+    console.error(`\n  macOS / Linux:`);
+    console.error(`    lsof -i :${PORT}   # find the PID`);
+    console.error(`    kill -9 <pid>`);
+    console.error(`\n  Or just run:  npm run free-port\n`);
+    process.exit(1);
+  } else if (err.code === 'EACCES') {
+    console.error(`\n[CampusFind] ERROR: Permission denied on port ${PORT}.`);
+    console.error(`  Use a port number above 1024 (set PORT in backend/.env).\n`);
+    process.exit(1);
+  } else {
+    console.error(`\n[CampusFind] Server listen error (${err.code}): ${err.message}\n`);
+    process.exit(1);
+  }
+});
+
 module.exports = app;
+
+
+
+
+
