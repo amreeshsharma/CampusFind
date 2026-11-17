@@ -37,8 +37,24 @@ const testConnection = async () => {
     connection.release();
     return true;
   } catch (error) {
-    console.warn(`[Database Warning]: Could not establish MySQL connection (${error.message}).`);
-    console.warn(`[Database Note]: Ensure MySQL service is running and database '${process.env.DB_NAME || 'campusfind_db'}' is created (Phase 3).`);
+    console.error('====================================================');
+    console.error('[FATAL DATABASE ERROR]: Could not establish MySQL connection!');
+    console.error(`Error Code: ${error.code || 'UNKNOWN'}`);
+    console.error(`Message   : ${error.message}`);
+
+    if (error.code === 'ECONNREFUSED') {
+      console.error(`Diagnosis : MySQL server is not running or unreachable at ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 3306}.`);
+      console.error('Fix       : Ensure the MySQL service/daemon is running (e.g. "net start MySQL80" or Services).');
+    } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+      console.error(`Diagnosis : Authentication failed for user '${process.env.DB_USER || 'root'}'.`);
+      console.error('Fix       : Check DB_USER and DB_PASSWORD in backend/.env file.');
+    } else if (error.code === 'ER_BAD_DB_ERROR') {
+      console.error(`Diagnosis : Database '${process.env.DB_NAME || 'campusfind_db'}' does not exist.`);
+      console.error('Fix       : Run "node backend/scripts/setupDatabase.js" to create schema and seed data.');
+    } else {
+      console.error('Fix       : Verify MySQL configuration in backend/.env.');
+    }
+    console.error('====================================================');
     return false;
   }
 };
