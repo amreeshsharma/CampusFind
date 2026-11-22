@@ -72,6 +72,12 @@ function setupLoginForm() {
       showToast(`Welcome back, ${result.user.name}!`, 'success');
 
       setTimeout(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirect = urlParams.get('redirect');
+        if (redirect) {
+          window.location.href = redirect;
+          return;
+        }
         if (result.user.role === 'admin') {
           window.location.href = 'admin-dashboard.html';
         } else {

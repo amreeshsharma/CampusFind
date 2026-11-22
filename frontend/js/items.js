@@ -234,12 +234,14 @@ async function initItemDetailsPage() {
   if (!detailsWrap) return;
 
   const urlParams = new URLSearchParams(window.location.search);
-  const itemId = urlParams.get('id') || 1;
+  const rawId = urlParams.get('id');
+  const itemId = rawId ? parseInt(rawId, 10) : 1;
 
   let item = null;
 
   try {
-    const res = await fetch(`${CONFIG.API_BASE_URL}/items/${itemId}`);
+    const fetchFunc = typeof authFetch === 'function' ? authFetch : fetch;
+    const res = await fetchFunc(`${CONFIG.API_BASE_URL}/items/${itemId}`);
     if (res.ok) {
       const result = await res.json();
       item = result.data;
@@ -248,29 +250,40 @@ async function initItemDetailsPage() {
     console.warn('Live item detail fetch notice:', err.message);
   }
 
-  // Fallback to mock item if server unreachable
+  // Fallback to mock item if server unreachable or offline preview
   if (!item && typeof MOCK_ITEMS !== 'undefined') {
-    const foundMock = MOCK_ITEMS.find(i => i.id == itemId) || MOCK_ITEMS[0];
-    item = {
-      id: foundMock.id,
-      title: foundMock.title,
-      description: foundMock.description,
-      item_type: foundMock.type,
-      category_name: foundMock.category,
-      color: foundMock.color,
-      location: foundMock.location,
-      item_date: foundMock.date,
-      image_path: foundMock.image,
-      status: foundMock.status,
-      qr_token: foundMock.qrToken,
-      reporter_name: 'Rahul Sharma'
-    };
+    const foundMock = MOCK_ITEMS.find(i => i.id == itemId) || (!rawId ? MOCK_ITEMS[0] : null);
+    if (foundMock) {
+      item = {
+        id: foundMock.id,
+        title: foundMock.title,
+        description: foundMock.description,
+        item_type: foundMock.type,
+        category_name: foundMock.category,
+        color: foundMock.color,
+        location: foundMock.location,
+        item_date: foundMock.date,
+        image_path: foundMock.image,
+        status: foundMock.status,
+        qr_token: foundMock.qrToken,
+        reporter_name: 'Rahul Sharma'
+      };
+    }
   }
 
   if (!item) {
-    detailsWrap.innerHTML = '<p class="text-error">Item could not be found.</p>';
+    detailsWrap.innerHTML = `
+      <div style="text-align: center; padding: 3rem 1.5rem; grid-column: 1 / -1;">
+        <h2 style="color: var(--color-error); margin-bottom: 0.5rem;">Belonging Not Found</h2>
+        <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">Item #${itemId} could not be located in the campus registry.</p>
+        <a href="javascript:history.back()" class="btn btn-primary btn-sm">← Return to Previous Page</a>
+      </div>
+    `;
     return;
   }
+
+  // Update Page Title
+  document.title = `${item.title} - CampusFind`;
 
   // Populate Fields
   const titleElem = document.getElementById('detail-title');
@@ -283,6 +296,7 @@ async function initItemDetailsPage() {
   const imageElem = document.getElementById('detail-image');
   const qrBox = document.getElementById('detail-qr-box');
   const claimBtn = document.getElementById('detail-claim-btn');
+  const custodyElem = document.getElementById('detail-custody');
 
   if (titleElem) titleElem.textContent = item.title;
   if (categoryElem) categoryElem.textContent = item.category_name || 'General';
@@ -290,6 +304,36 @@ async function initItemDetailsPage() {
   if (dateElem) dateElem.textContent = formatDate(item.item_date);
   if (colorElem) colorElem.textContent = item.color;
   if (descElem) descElem.textContent = item.description;
+
+  // Dynamic Custody Status text & colors
+  if (custodyElem) {
+    if (item.item_type === 'lost') {
+      if (item.status === 'recovered') {
+        custodyElem.textContent = 'Recovered & Handed to Owner';
+        custodyElem.style.color = 'var(--color-success)';
+      } else if (item.status === 'closed') {
+        custodyElem.textContent = 'Case Closed / Archived';
+        custodyElem.style.color = 'var(--color-text-muted)';
+      } else {
+        custodyElem.textContent = 'Reported Lost - Pending Discovery';
+        custodyElem.style.color = 'var(--color-warning)';
+      }
+    } else {
+      if (item.status === 'claim_pending') {
+        custodyElem.textContent = 'Under Ownership Verification';
+        custodyElem.style.color = 'var(--color-warning)';
+      } else if (item.status === 'recovered') {
+        custodyElem.textContent = 'Handover Complete (Recovered)';
+        custodyElem.style.color = 'var(--color-success)';
+      } else if (item.status === 'closed') {
+        custodyElem.textContent = 'Case Closed / Archived';
+        custodyElem.style.color = 'var(--color-text-muted)';
+      } else {
+        custodyElem.textContent = 'At Security Desk (Gate 1)';
+        custodyElem.style.color = 'var(--color-success)';
+      }
+    }
+  }
 
   if (imageElem) {
     const isPagesFolder = window.location.pathname.includes('/pages/');
@@ -305,6 +349,12 @@ async function initItemDetailsPage() {
     typeBadgeElem.textContent = item.item_type.toUpperCase();
   }
 
+  // Claim modal title & hidden id sync
+  const claimModalTitle = document.getElementById('claim-modal-item-title');
+  const claimModalInput = document.getElementById('claim-item-id-input');
+  if (claimModalTitle) claimModalTitle.textContent = item.title;
+  if (claimModalInput) claimModalInput.value = item.id;
+
   if (claimBtn) {
     if (item.item_type === 'found' && item.status === 'open') {
       claimBtn.style.display = 'inline-flex';
@@ -312,6 +362,12 @@ async function initItemDetailsPage() {
     } else {
       claimBtn.style.display = 'none';
     }
+  }
+
+  // Dynamic Rule Match Score Button
+  const matchBtn = document.getElementById('detail-match-btn');
+  if (matchBtn) {
+    matchBtn.onclick = () => openMatchModalForCurrentItem(item.id);
   }
 
   if (qrBox) {
@@ -455,7 +511,7 @@ async function handleItemFormSubmit(e, itemType) {
     }, 1000);
   } catch (err) {
     console.error('Item submission error:', err);
-    if (err.message.includes('fetch') || err.message.includes('Network') || err.message.includes('Failed')) {
+    if ((err.name === 'TypeError' && err.message.includes('fetch')) || err.message.includes('NetworkError') || window.location.protocol === 'file:') {
       showToast('Backend server connection note. Saved item report locally for demonstration.', 'info', 4000);
       setTimeout(() => {
         window.location.href = itemType === 'lost' ? 'lost-items.html' : 'found-items.html';

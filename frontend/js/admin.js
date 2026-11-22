@@ -314,7 +314,7 @@ async function loadAdminItems() {
           <td><span class="badge ${statusBadge}">${statusText}</span></td>
           <td>
             <div style="display:flex; gap:0.35rem;">
-              <a href="item-details.html?id=${item.id}" class="btn btn-outline-secondary btn-sm" style="font-size:0.75rem; padding:0.25rem 0.5rem;">View</a>
+              <button class="btn btn-outline-secondary btn-sm" onclick="viewAdminItem(${item.id})" style="font-size:0.75rem; padding:0.25rem 0.5rem;">View</button>
               <button class="btn btn-danger btn-sm" onclick="handleAdminDeleteItem(${item.id})" style="font-size:0.75rem; padding:0.25rem 0.5rem;">Delete</button>
             </div>
           </td>
@@ -323,6 +323,221 @@ async function loadAdminItems() {
     }).join('');
   } catch (err) {
     console.warn('Admin items notice:', err.message);
+  }
+}
+
+/**
+ * Open Item Inspection Modal with full item & reporter details for a specific item
+ */
+async function viewAdminItem(itemId) {
+  openModal('admin-item-details-modal');
+  const modalTitle = document.getElementById('admin-modal-title');
+  const modalTypeBadge = document.getElementById('admin-modal-type-badge');
+  const modalBody = document.getElementById('admin-modal-body');
+  const actionsLeft = document.getElementById('admin-modal-actions-left');
+
+  if (modalTitle) modalTitle.textContent = `Loading Item #${itemId}...`;
+  if (modalBody) {
+    modalBody.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem;">
+        <span class="spinner" style="width: 32px; height: 32px; display: inline-block;"></span>
+        <p style="margin-top: 0.75rem; color: var(--color-text-muted); font-size: 0.875rem;">Fetching details from campus registry...</p>
+      </div>
+    `;
+  }
+
+  try {
+    const res = await authFetch(`${CONFIG.API_BASE_URL}/items/${itemId}`);
+    if (!res.ok) throw new Error(`Item #${itemId} was not found or could not be loaded.`);
+
+    const result = await res.json();
+    const item = result.data;
+    if (!item) throw new Error(`Item #${itemId} data missing.`);
+
+    const isLost = item.item_type === 'lost';
+    const typeBadgeClass = isLost ? 'badge-lost' : 'badge-found';
+
+    let statusBadgeClass = 'badge-found';
+    let statusLabel = 'OPEN';
+    if (item.status === 'claim_pending') {
+      statusBadgeClass = 'badge-pending';
+      statusLabel = 'CLAIM PENDING';
+    } else if (item.status === 'recovered') {
+      statusBadgeClass = 'badge-recovered';
+      statusLabel = 'RECOVERED';
+    } else if (item.status === 'closed') {
+      statusBadgeClass = 'badge';
+      statusLabel = 'CLOSED';
+    }
+
+    if (modalTitle) modalTitle.textContent = `#${item.id} - ${item.title}`;
+    if (modalTypeBadge) {
+      modalTypeBadge.className = `badge ${typeBadgeClass}`;
+      modalTypeBadge.textContent = item.item_type.toUpperCase();
+    }
+
+    const isPagesFolder = window.location.pathname.includes('/pages/');
+    const assetsPrefix = isPagesFolder ? '../' : '';
+    const imageUrl = getItemImageUrl(item.image_path, item.title, item.category_name, assetsPrefix);
+
+    // Custody Description
+    let custodyText = 'At Security Desk (Gate 1)';
+    let custodyColor = 'var(--color-success)';
+    if (isLost) {
+      if (item.status === 'recovered') {
+        custodyText = 'Recovered & Handed Back to Owner';
+        custodyColor = 'var(--color-success)';
+      } else if (item.status === 'closed') {
+        custodyText = 'Case Closed / Archived';
+        custodyColor = 'var(--color-text-muted)';
+      } else {
+        custodyText = 'Reported Lost - Pending Campus Discovery';
+        custodyColor = 'var(--color-warning)';
+      }
+    } else {
+      if (item.status === 'claim_pending') {
+        custodyText = 'Ownership Claim Under Verification';
+        custodyColor = 'var(--color-warning)';
+      } else if (item.status === 'recovered') {
+        custodyText = 'Verified & Handed Over to Claimant';
+        custodyColor = 'var(--color-success)';
+      } else if (item.status === 'closed') {
+        custodyText = 'Case Closed / Archived';
+        custodyColor = 'var(--color-text-muted)';
+      }
+    }
+
+    modalBody.innerHTML = `
+      <div style="display: grid; grid-template-columns: 180px 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
+        <div>
+          <div style="width: 100%; height: 160px; border-radius: var(--radius-md, 10px); overflow: hidden; background: #F5EFE7; border: 1px solid var(--color-border-subtle); display: flex; align-items: center; justify-content: center;">
+            <img src="${imageUrl}" alt="${item.title}" style="width:100%; height:100%; object-fit: cover;" onerror="this.src='${assetsPrefix}assets/images/hero-campus.jpg';">
+          </div>
+          ${item.qr_token ? `
+            <div style="margin-top: 0.75rem; text-align: center; padding: 0.5rem; background: var(--color-bg-light); border-radius: 8px; border: 1px dashed var(--primary-color);">
+              <div style="font-size: 0.7rem; font-weight: 700; color: var(--primary-color);">📱 QR Custody Tag</div>
+              <code style="font-size: 0.75rem; font-weight: 700;">${item.qr_token}</code>
+              <div style="margin-top: 0.35rem;">
+                <a href="verify-item.html?token=${encodeURIComponent(item.qr_token)}" target="_blank" style="font-size: 0.7rem; color: var(--primary-color); text-decoration: underline;">Verify Token ↗</a>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+
+        <div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.65rem; background: var(--color-bg-light); padding: 0.85rem; border-radius: 10px; border: 1px solid var(--color-border-subtle); font-size: 0.8125rem;">
+            <div>
+              <span style="color: var(--color-text-muted);">Category:</span>
+              <div style="font-weight: 600;">${item.category_name || 'General'}</div>
+            </div>
+            <div>
+              <span style="color: var(--color-text-muted);">Location:</span>
+              <div style="font-weight: 600;">${item.location || '—'}</div>
+            </div>
+            <div>
+              <span style="color: var(--color-text-muted);">Date Logged:</span>
+              <div style="font-weight: 600;">${formatDate(item.item_date)}</div>
+            </div>
+            <div>
+              <span style="color: var(--color-text-muted);">Color:</span>
+              <div style="font-weight: 600;">${item.color || '—'}</div>
+            </div>
+            <div>
+              <span style="color: var(--color-text-muted);">Current Status:</span>
+              <div><span class="badge ${statusBadgeClass}" id="admin-modal-status-badge" style="font-size:0.7rem;">${statusLabel}</span></div>
+            </div>
+            <div>
+              <span style="color: var(--color-text-muted);">Custody State:</span>
+              <div style="font-weight: 600; color: ${custodyColor}; font-size: 0.75rem;">${custodyText}</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 0.85rem;">
+            <div style="font-size: 0.8125rem; font-weight: 700; color: var(--text-color); margin-bottom: 0.25rem;">Item Description</div>
+            <p style="font-size: 0.8125rem; line-height: 1.5; color: var(--text-color); background: #FFF; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--color-border-subtle); margin: 0;">
+              ${item.description || 'No specific description logged.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reporter Information Card (Governance) -->
+      <div style="background: #FFF; border: 1px solid var(--color-border-subtle); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem;">
+        <div style="font-size: 0.8125rem; font-weight: 700; color: var(--primary-color); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+          <span>👤</span> Reporter Information
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.8125rem;">
+          <div><span style="color: var(--color-text-muted);">Name:</span> <strong>${item.reporter_name || 'Anonymous'}</strong></div>
+          <div><span style="color: var(--color-text-muted);">Email:</span> <a href="mailto:${item.reporter_email || ''}" style="color: var(--primary-color);">${item.reporter_email || '—'}</a></div>
+          <div><span style="color: var(--color-text-muted);">Department:</span> ${item.reporter_department || '—'}</div>
+          <div><span style="color: var(--color-text-muted);">Phone:</span> ${item.reporter_phone || '—'}</div>
+        </div>
+      </div>
+
+      <!-- Admin Status Governance Controls -->
+      <div style="background: var(--color-bg-light); border: 1px solid var(--color-border-subtle); border-radius: 10px; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <label for="admin-modal-status-select" style="font-weight: 600; font-size: 0.8125rem; margin: 0;">Update Lifecycle Status:</label>
+          <select id="admin-modal-status-select" class="form-control" style="width: auto; padding: 0.25rem 0.6rem; font-size: 0.8125rem; height: auto;">
+            <option value="open" ${item.status === 'open' ? 'selected' : ''}>OPEN</option>
+            <option value="claim_pending" ${item.status === 'claim_pending' ? 'selected' : ''}>CLAIM PENDING</option>
+            <option value="recovered" ${item.status === 'recovered' ? 'selected' : ''}>RECOVERED</option>
+            <option value="closed" ${item.status === 'closed' ? 'selected' : ''}>CLOSED</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="handleAdminUpdateItemStatus(${item.id})" style="font-size:0.75rem; padding: 0.25rem 0.65rem;">
+            Save
+          </button>
+        </div>
+      </div>
+    `;
+
+    if (actionsLeft) {
+      actionsLeft.innerHTML = `
+        <a href="item-details.html?id=${item.id}" target="_blank" class="btn btn-outline-secondary btn-sm" style="font-size:0.75rem;">
+          Public Page ↗
+        </a>
+        <button class="btn btn-danger btn-sm" onclick="handleAdminDeleteItem(${item.id}); closeModal('admin-item-details-modal');" style="font-size:0.75rem;">
+          Delete Item
+        </button>
+      `;
+    }
+  } catch (err) {
+    if (modalBody) {
+      modalBody.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--color-error);">
+          <p style="font-weight: 600;">Failed to load item #${itemId}</p>
+          <p style="font-size: 0.8125rem; color: var(--color-text-muted);">${err.message}</p>
+        </div>
+      `;
+    }
+  }
+}
+
+async function handleAdminUpdateItemStatus(itemId) {
+  const select = document.getElementById('admin-modal-status-select');
+  if (!select) return;
+
+  const newStatus = select.value;
+
+  try {
+    const res = await authFetch(`${CONFIG.API_BASE_URL}/items/${itemId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+
+    const result = await res.json();
+    if (!res.ok) {
+      showToast(result.message || 'Failed to update item status.', 'error');
+      return;
+    }
+
+    showToast(`Item #${itemId} status updated to ${newStatus.toUpperCase()}.`, 'success');
+    await loadAdminItems();
+    await loadAdminStats();
+    await viewAdminItem(itemId);
+  } catch (err) {
+    showToast('Network error while updating status.', 'error');
   }
 }
 
